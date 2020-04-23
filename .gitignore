@@ -1,1 +1,3 @@
 .idea
+Model/__pycache__/*
+log.lp
