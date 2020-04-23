@@ -6,7 +6,7 @@ from Model.Network import Network
 
 def run():
     try:
-        N = 3
+        N = 10
         model = Model("Edge Computing Resource Allocation")
         network = Network(model)
 
@@ -18,6 +18,7 @@ def run():
         set_unq_constraints(network)
 
         model.setParam("NonConvex", 2)
+        # model.setParam("MIPGap", 15)
 
         model.write("log.lp")
         model.optimize()
@@ -33,8 +34,8 @@ def run():
 
 def set_objectives(network: Network):
     network.model.setObjectiveN(quicksum(network.nodes[i].total_time for i in range(network.get_size())), GRB.MINIMIZE)
-    # network.model.setObjectiveN(quicksum(network.nodes[i].total_energy for i in range(network.get_size())),
-    #                             GRB.MINIMIZE)
+    network.model.setObjectiveN(quicksum(network.nodes[i].total_energy for i in range(network.get_size())),
+                                GRB.MINIMIZE)
 
 
 def set_eq_constraints(network: Network):
@@ -54,10 +55,10 @@ def set_eq_constraints(network: Network):
         model.addGenConstrLogA(node.signal_power, node.maximum_rate, 2)
 
         model.addConstr(node.local_energy == node.cpu_power * node.cpu_power * network.etha * node.task_size)
-        model.addConstr(node.edge_energy == node.transmit_power * node.data_size * node.transmit_time)
+        model.addConstr(node.edge_energy == node.transmit_power  * node.transmit_time)
         model.addConstr(node.total_energy == node.x * node.edge_energy + (1 - node.x) * node.local_energy)
 
-        model.addConstr(node.x == 1)
+        # model.addConstr(node.x == 1)
 
 
 def set_unq_constraints(network: Network):
@@ -79,7 +80,7 @@ def print_result(network: Network):
     for i in range(network.get_size()):
         result.append(network.nodes[i].get_result())
     print(tabulate(result, headers=['index', 'x', 'time', 'energy', 'cpu', 'rate', 'power',
-                                    'edge time', 'local time', 'transmit time', 'data size']))
+                                    'edge time', 'local time', 'transmit time', 'data size','task size']))
 
 
 run()
