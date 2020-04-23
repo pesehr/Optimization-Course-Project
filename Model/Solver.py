@@ -1,11 +1,12 @@
 from gurobipy import *
 from tabulate import tabulate
+
 from Model.Network import Network
 
 
 def run():
     try:
-        N = 2
+        N = 3
         model = Model("Edge Computing Resource Allocation")
         network = Network(model)
 
@@ -45,17 +46,19 @@ def set_eq_constraints(network: Network):
         model.addConstr(node.edge_time * node.edge_cpu == node.x * node.task_size)
 
         model.addConstr(node.interference == quicksum(network.nodes[j].x * network.nodes[j].transmit_power
-                        * (node.distance(0,0)**-2) for j in range(network.get_size()) if j != i)
+                                                      * (node.distance(0, 0) ** -2) for j in range(network.get_size())
+                                                      if j != i)
                         + network.noise)
-        model.addConstr(node.signal_power * node.interference - node.transmit_power * (node.distance(0,0)**2)
+        model.addConstr(node.signal_power * node.interference - node.transmit_power * (node.distance(0, 0) ** 2)
                         == node.interference)
         model.addGenConstrLogA(node.signal_power, node.maximum_rate, 2)
 
-        model.addConstr(node.local_energy == node.cpu_power*node.cpu_power*network.etha*node.task_size)
-        model.addConstr(node.edge_energy == node.transmit_power * node.data_size*node.transmit_time)
-        model.addConstr(node.total_energy == node.x * node.edge_energy + (1-node.x) * node.local_energy)
+        model.addConstr(node.local_energy == node.cpu_power * node.cpu_power * network.etha * node.task_size)
+        model.addConstr(node.edge_energy == node.transmit_power * node.data_size * node.transmit_time)
+        model.addConstr(node.total_energy == node.x * node.edge_energy + (1 - node.x) * node.local_energy)
 
         model.addConstr(node.x == 1)
+
 
 def set_unq_constraints(network: Network):
     model = network.model
@@ -68,14 +71,15 @@ def set_unq_constraints(network: Network):
         model.addConstr(node.transmit_power <= node.max_power)
     model.addConstr(quicksum(network.nodes[i].edge_cpu for i in range(network.get_size())) <= network.max_cpu)
 
-def print_result(network :Network):
+
+def print_result(network: Network):
     # for v in model.getVars():
     #     print('%s %g' % (v.varName, v.x))
     result = []
     for i in range(network.get_size()):
         result.append(network.nodes[i].get_result())
     print(tabulate(result, headers=['index', 'x', 'time', 'energy', 'cpu', 'rate', 'power',
-                                    'edge time','local time','transmit time','data size']))
+                                    'edge time', 'local time', 'transmit time', 'data size']))
 
 
 run()

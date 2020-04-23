@@ -35,5 +35,5 @@ class Node:
 
     def get_result(self):
         result = [self.index, self.x.x, self.total_time.x, self.total_energy.x, self.edge_cpu.x, self.transmit_rate.x,
-                  self.transmit_power.x, self.edge_time.x, self.local_time.x, self.transmit_time.x, self.data_size.x]
+                  self.transmit_power.x, self.edge_time.x, self.local_time.x, self.transmit_time.x, self.data_size]
         return result
