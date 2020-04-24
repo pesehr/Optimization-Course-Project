@@ -6,19 +6,23 @@ from Model.Network import Network
 
 def run():
     try:
-        N = 7
+        f = open("data.dat", "r")
         model = Model("Edge Computing Resource Allocation")
         network = Network(model)
 
+        N = int(f.readline())
+        # network.max_channels = int(N/2)
         for i in range(N):
-            network.add_new_random_node()
+            l = f.readline()
+            node_data = l.split(",")
+            network.add_new_random_node(node_data[0],node_data[1],node_data[2],node_data[3])
 
         set_objectives(network)
         set_eq_constraints(network)
         set_unq_constraints(network)
 
         model.setParam("NonConvex", 2)
-        # model.setParam("MIPGap", 15)
+        model.setParam("MIPGap", 0.02)
 
         # model.computeIIS()
         # model.write("inf.ilp")
@@ -36,9 +40,9 @@ def run():
 
 
 def set_objectives(network: Network):
-    # network.model.setObjectiveN(quicksum(network.nodes[i].total_time for i in range(network.get_size())), GRB.MINIMIZE)
+    network.model.setObjectiveN(quicksum(network.nodes[i].total_time for i in range(network.get_size())), 1)
     network.model.setObjectiveN(quicksum(network.nodes[i].total_energy for i in range(network.get_size())),
-                                GRB.MINIMIZE)
+                                2)
 
 
 def set_eq_constraints(network: Network):
@@ -60,7 +64,7 @@ def set_eq_constraints(network: Network):
         model.addConstr(node.local_energy == node.task_size * node.cpu_power*node.cpu_power*network.k*(1-node.x))
         model.addConstr(node.edge_energy == node.transmit_power * node.transmit_time)
         model.addConstr(node.total_energy == node.x * node.edge_energy + (1 - node.x) * node.local_energy)
-
+        model.addConstr(node.x == 1)
 
 
 def set_unq_constraints(network: Network):
@@ -74,18 +78,29 @@ def set_unq_constraints(network: Network):
         model.addConstr(node.transmit_power <= node.max_power * node.x)
     model.addConstr(network.used_channels <= network.max_channels)
     model.addConstr(quicksum(network.nodes[i].x for i in range(network.get_size())) == network.used_channels)
-    model.addConstr(quicksum(network.nodes[i].edge_cpu for i in range(network.get_size())) <= network.max_cpu)
+    model.addConstr(quicksum(network.nodes[i].edge_cpu * network.nodes[i].x
+                             for i in range(network.get_size())) == network.max_cpu)
 
 
 def print_result(network: Network):
-    # for v in model.getVars():
-    #     print('%s %g' % (v.varName, v.x))
     result = []
     for i in range(network.get_size()):
         result.append(network.nodes[i].get_result())
+
+    m = network.model
+    nSolutions = m.SolCount
+    nObjectives = m.NumObj
+    print('Problem has', nObjectives, 'objectives')
+    print('Gurobi found', nSolutions, 'solutions')
     print(tabulate(result, headers=['index', 'x', 'time', 'energy', 'cpu', 'rate', 'power',
                                     'edge time', 'local time', 'transmit time','edge time',
-                                    'Signal Power', 'data size', 'task size', 'maximum rate']))
+                                    'Signal Power', 'data size', 'task size', 'maximum rate','distance']))
+    m.params.SolutionNumber = 0
+    m.params.ObjNumber = 1
+    print(' ', m.ObjNVal, end='')
+    m.params.ObjNumber = 2
+    print(' ', m.ObjNVal, end='')
+
 
 
 run()
