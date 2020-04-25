@@ -1,7 +1,7 @@
 import random
 
-f = open("data.dat", "w")
-N = 10
+f = open("data2.dat", "w")
+N = 100
 
 f.write(str(N) + "\n")
 for i in range(N):

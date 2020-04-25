@@ -6,12 +6,12 @@ from Model.Network import Network
 
 def run():
     try:
-        f = open("data.dat", "r")
+        f = open("./data2.dat", "r")
         model = Model("Edge Computing Resource Allocation")
         network = Network(model)
 
         N = int(f.readline())
-        # network.max_channels = int(N/2)
+
         for i in range(N):
             l = f.readline()
             node_data = l.split(",")
@@ -22,15 +22,12 @@ def run():
         set_unq_constraints(network)
 
         model.setParam("NonConvex", 2)
-        model.setParam("MIPGap", 0.02)
-
-        # model.computeIIS()
-        # model.write("inf.ilp")
+        model.setParam("MIPGap", 0.07)
 
         model.write("log.lp")
         model.optimize()
 
-        print_result(network)
+        print_result(network,N)
 
     except GurobiError as e:
         print('Error code ' + str(e.errno) + ": " + str(e))
@@ -57,14 +54,15 @@ def set_eq_constraints(network: Network):
                                                       * (node.distance(0, 0) ** -2) for j in range(network.get_size())
                                                       if j != i)
                         + network.noise)
-        model.addConstr(node.signal_power * node.interference - node.transmit_power * (node.distance(0, 0) ** 2)
-                        == node.interference)
-        model.addGenConstrLogA(node.signal_power, node.maximum_rate, 2)
+        model.addConstr(node.signal_power == node.x * node.transmit_power * (node.distance(0, 0) ** 2))
+        model.addConstr(node.signal_power >= node.interference * network.theta)
+        model.addConstr(node.signal_power_plus == node.signal_power + 1)
+        model.addGenConstrLogA(node.signal_power_plus, node.maximum_rate, 2)
 
         model.addConstr(node.local_energy == node.task_size * node.cpu_power*node.cpu_power*network.k*(1-node.x))
         model.addConstr(node.edge_energy == node.transmit_power * node.transmit_time)
         model.addConstr(node.total_energy == node.x * node.edge_energy + (1 - node.x) * node.local_energy)
-        model.addConstr(node.x == 1)
+        model.addConstr(quicksum(network.nodes[i].x for i in range(network.get_size())) == network.used_channels)
 
 
 def set_unq_constraints(network: Network):
@@ -74,15 +72,14 @@ def set_unq_constraints(network: Network):
         model.addConstr(node.total_time >= node.edge_time + node.transmit_time)
         model.addConstr(node.total_time >= node.local_time)
         model.addConstr(node.transmit_rate*network.used_channels <= node.maximum_rate * 2 * network.bandwidth)
-        model.addConstr(node.transmit_power >= node.min_power * node.x)
-        model.addConstr(node.transmit_power <= node.max_power * node.x)
+        model.addConstr(node.transmit_power >= node.min_power )
+        model.addConstr(node.transmit_power <= node.max_power)
     model.addConstr(network.used_channels <= network.max_channels)
-    model.addConstr(quicksum(network.nodes[i].x for i in range(network.get_size())) == network.used_channels)
     model.addConstr(quicksum(network.nodes[i].edge_cpu * network.nodes[i].x
-                             for i in range(network.get_size())) == network.max_cpu)
+                             for i in range(network.get_size())) <= network.max_cpu)
 
 
-def print_result(network: Network):
+def print_result(network: Network,N):
     result = []
     for i in range(network.get_size()):
         result.append(network.nodes[i].get_result())
@@ -94,12 +91,12 @@ def print_result(network: Network):
     print('Gurobi found', nSolutions, 'solutions')
     print(tabulate(result, headers=['index', 'x', 'time', 'energy', 'cpu', 'rate', 'power',
                                     'edge time', 'local time', 'transmit time','edge time',
-                                    'Signal Power', 'data size', 'task size', 'maximum rate','distance']))
+                                    'Signal Power', 'data size', 'task size', 'maximum rate','distance','interference']))
     m.params.SolutionNumber = 0
     m.params.ObjNumber = 1
-    print(' ', m.ObjNVal, end='')
+    print(' ', m.ObjNVal/N, end='')
     m.params.ObjNumber = 2
-    print(' ', m.ObjNVal, end='')
+    print(' ', m.ObjNVal/N, end='')
 
 
 

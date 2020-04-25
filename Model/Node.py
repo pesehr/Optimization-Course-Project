@@ -19,6 +19,7 @@ class Node:
         self.transmit_rate = gurobi_model.addVar(vtype=GRB.CONTINUOUS, name="r" + index)
         self.edge_cpu = gurobi_model.addVar(vtype=GRB.CONTINUOUS, name="f" + index)
         self.maximum_rate = gurobi_model.addVar(vtype=GRB.CONTINUOUS, name="mr" + index)
+        self.signal_power_plus = gurobi_model.addVar(vtype=GRB.CONTINUOUS, name="mir" + index)
         self.interference = gurobi_model.addVar(vtype=GRB.CONTINUOUS, name="ir" + index)
         self.transmit_power = gurobi_model.addVar(vtype=GRB.CONTINUOUS, name="p" + index)
         self.signal_power = gurobi_model.addVar(vtype=GRB.CONTINUOUS, name="SINR" + index)
@@ -36,5 +37,5 @@ class Node:
     def get_result(self):
         result = [self.index, self.x.x, self.total_time.x, self.total_energy.x, self.edge_cpu.x, self.transmit_rate.x,
                   self.transmit_power.x, self.edge_time.x, self.local_time.x, self.transmit_time.x, self.edge_time.x,
-                  self.signal_power.x, self.data_size, self.task_size, self.maximum_rate.x, self.distance(0,0)]
+                  self.signal_power.x, self.data_size, self.task_size, self.maximum_rate.x, self.distance(0,0), self.interference.x]
         return result
